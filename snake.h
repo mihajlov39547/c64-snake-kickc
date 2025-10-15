@@ -67,4 +67,12 @@ void snake_step_grow(Snake* s, Direction dir);
 // Compute the current tail index (head - (len-1) modulo SNAKE_LEN)
 unsigned char snake_tail_index(const Snake* s);
 
+// Check if moving to (nx,ny) would cause self-collision (non-zero if yes)
+void snake_compute_next_head_wrap(const Snake* s, Direction dir,
+                                  unsigned char* nx, unsigned char* ny);
+
+// Check if (nx,ny) is occupied by the snake body excluding the tail
+unsigned char snake_will_self_collide_next(const Snake* s,
+                                           unsigned char nx, unsigned char ny);
+
 #endif /* SNAKE_H */

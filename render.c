@@ -193,6 +193,7 @@ void render_apply_grow(unsigned char head_x, unsigned char head_y) {
 #define COL_BG  6
 #endif
 
+// Clear the whole playfield area to the background char/color
 void render_clear_playfield(void) {
     // Clear the entire playfield to the background char/color
     unsigned int off = 0;
@@ -210,6 +211,7 @@ void render_clear_playfield(void) {
     }
 }
 
+// Replace a single cell with the playfield background
 void render_erase_cell(unsigned char x, unsigned char y) {
     // Replace a single cell with the playfield background
     unsigned int off = (unsigned int)y * MAP_W + x;
@@ -219,4 +221,78 @@ void render_erase_cell(unsigned char x, unsigned char y) {
 
     // Match the cleared playfield background color
     COLOR_RAM[off] = COL_BG;
+}
+
+// Draw the "PAUSED" message centered on the screen
+// (overwrites whatever was there; caller must redraw)
+void render_show_pause(void) {
+    // Line 1: "== PAUSED ==" (12 chars)
+    static const char msg1[12] = { '=', '=', ' ', 'p','a','u','s','e','d',' ', '=', '=' };
+    // Line 2: "(press SPACE to continue)" (25 chars)
+    static const char msg2[25] =
+        { '(', 'p','r','e','s','s',' ', 's','p','a','c','e',' ', 't','o',' ',
+          'c','o','n','t','i','n','u','e', ')' };
+
+    const unsigned char len1 = (unsigned char)12;
+    const unsigned char len2 = (unsigned char)25;
+
+    const unsigned char row1 = (unsigned char)12;
+    const unsigned char row2 = (unsigned char)13;
+
+    const unsigned char col1 = (unsigned char)((unsigned char)(40u - (unsigned int)len1) / 2u);
+    const unsigned char col2 = (unsigned char)((unsigned char)(40u - (unsigned int)len2) / 2u);
+
+    unsigned int off;
+    unsigned char i;
+
+    // Line 1
+    off = (unsigned int)row1 * 40u + (unsigned int)col1;
+    i = 0u;
+    while (i != len1) {
+        SCREEN[off + (unsigned int)i]    = (unsigned char)msg1[i];
+        COLOR_RAM[off + (unsigned int)i] = (unsigned char)1;
+        i++;
+    }
+
+    // Line 2
+    off = (unsigned int)row2 * 40u + (unsigned int)col2;
+    i = 0u;
+    while (i != len2) {
+        SCREEN[off + (unsigned int)i]    = (unsigned char)msg2[i];
+        COLOR_RAM[off + (unsigned int)i] = (unsigned char)1;
+        i++;
+    }
+}
+
+// Erase the "PAUSED" message by overwriting with spaces
+void render_hide_pause(void) {
+    const unsigned char len1 = (unsigned char)12;
+    const unsigned char len2 = (unsigned char)25;
+
+    const unsigned char row1 = (unsigned char)12;
+    const unsigned char row2 = (unsigned char)13;
+
+    const unsigned char col1 = (unsigned char)((unsigned char)(40u - (unsigned int)len1) / 2u);
+    const unsigned char col2 = (unsigned char)((unsigned char)(40u - (unsigned int)len2) / 2u);
+
+    unsigned int off;
+    unsigned char i;
+
+    // Clear line 1
+    off = (unsigned int)row1 * 40u + (unsigned int)col1;
+    i = 0u;
+    while (i != len1) {
+        SCREEN[off + (unsigned int)i]    = (unsigned char)32; // space
+        COLOR_RAM[off + (unsigned int)i] = (unsigned char)0;  // black (or keep prior)
+        i++;
+    }
+
+    // Clear line 2
+    off = (unsigned int)row2 * 40u + (unsigned int)col2;
+    i = 0u;
+    while (i != len2) {
+        SCREEN[off + (unsigned int)i]    = (unsigned char)32;
+        COLOR_RAM[off + (unsigned int)i] = (unsigned char)0;
+        i++;
+    }
 }

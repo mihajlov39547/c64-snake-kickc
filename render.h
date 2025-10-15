@@ -63,4 +63,9 @@ void render_clear_playfield(void);
 // Replace a single cell with the playfield background
 void render_erase_cell(unsigned char x, unsigned char y);
 
+// Show or hide the "PAUSED" message at fixed position (16,12)
+void render_show_pause(void);
+void render_hide_pause(void);
+
+
 #endif

@@ -6,6 +6,8 @@
 
 #include <c64.h>
 #include "food.h"
+#include "render.h"
+#include "hunger.h"
 
 // Tracks whether SID RNG has been initialized (0 = no, 1 = yes)
 static unsigned char g_rng_inited = 0;
@@ -71,4 +73,25 @@ void food_init(Food* f, const Snake* s) {
 
     // Draw the newly spawned food
     render_draw_food(f->x, f->y);
+}
+
+
+// Handle eating food without growth:
+// - Normal snake step (no growth)
+// - Hunger reset and calm border
+// - Respawn and draw new foodyj
+void food_handle_eat_no_growth(Snake* s, Direction dir, Food* food) {
+    unsigned char old_tail_x, old_tail_y, nhx, nhy;
+
+    // Normal step (no growth)
+    snake_step(s, dir, &old_tail_x, &old_tail_y);
+    snake_head_xy(s, &nhx, &nhy);
+    render_apply_step(old_tail_x, old_tail_y, nhx, nhy);
+
+    // Hunger reset and calm border
+    hunger_reset_on_feed();
+
+    // Respawn and draw food
+    food_spawn(food, s);
+    render_draw_food(food->x, food->y);
 }

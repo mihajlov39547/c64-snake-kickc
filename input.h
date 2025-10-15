@@ -16,4 +16,13 @@ void input_init(void);
 // - Prevents 180° instant reversal (up/down, left/right)
 void input_update(Direction* dir);
 
+// Returns 1 exactly once per *physical* press of 'P' (edge detection).
+// Requires the key to be fully released before it can trigger again.
+unsigned char input_pause_press(void);
+
+// Returns 1 exactly once per *physical* press of SPACE (edge detection).
+// Requires the key to be fully released before it can trigger again.
+unsigned char input_unpause_press(void);
+
+
 #endif

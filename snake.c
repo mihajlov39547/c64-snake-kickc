@@ -191,3 +191,39 @@ unsigned char snake_tail_index(const Snake* s) {
     }
     return t;
 }
+
+// Compute the next wrapped head cell if moving in 'dir' (no mutation)
+void snake_compute_next_head_wrap(const Snake* s, Direction dir,
+                                  unsigned char* nx, unsigned char* ny) {
+    unsigned char hx, hy;
+    signed char dx = 0, dy = 0;
+    snake_head_xy(s, &hx, &hy);
+
+    if (dir==DIR_UP) dy = -1;
+    else if (dir==DIR_DOWN) dy = +1;
+    else if (dir==DIR_LEFT) dx = -1;
+    else dx = +1;
+
+    // X wrap
+    *nx = hx;
+    if (dx > 0) { (*nx)++; if (*nx >= MAP_W) *nx = 0; }
+    else if (dx < 0) { if (*nx == 0) *nx = (unsigned char)(MAP_W-1); else (*nx)--; }
+
+    // Y wrap
+    *ny = hy;
+    if (dy > 0) { (*ny)++; if (*ny >= MAP_H) *ny = 0; }
+    else if (dy < 0) { if (*ny == 0) *ny = (unsigned char)(MAP_H-1); else (*ny)--; }
+}
+
+// Test if moving to (nx,ny) would collide with the snake body (excluding moving tail)
+unsigned char snake_will_self_collide_next(const Snake* s,
+                                           unsigned char nx, unsigned char ny) {
+    unsigned char tail_i = snake_tail_index(s);
+    unsigned char i;
+    for (i = 0; i < SNAKE_LEN; i++) {
+        // moving tail vacates its cell
+        if (i == tail_i) continue;
+        if (s->x[i] == nx && s->y[i] == ny) return 1u;
+    }
+    return 0u;
+}
