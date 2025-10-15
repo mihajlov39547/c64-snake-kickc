@@ -1,19 +1,23 @@
 # 🐍 C64 Snake (KickC 0.8.6)
 
 A fully playable **Snake game for the Commodore 64**, written in **C using the KickC compiler (version 0.8.6)**.  
-This repository serves as a clean, well-commented example on how to structure a small C64 game in modern C with a low-level 8‑bit toolchain.
+This project demonstrates clean modular architecture, hardware-safe timing, and modern C structure on an 8-bit platform.
 
-> **Goal:** Survive as long as possible. The game tracks elapsed time in the HUD (top-left).
+> **Goal:** Survive as long as possible by eating food to stay alive — hunger counts down every second!  
+> The HUD shows elapsed time and speed ramping. Don’t starve!
 
 ---
 
 ## ✨ Features
 
-- Text‑mode rendering (40×25) with fast addressing helpers
-- SID‑based RNG for food spawning (fragment-safe, no `/` or `%`)
-- Smooth keyboard controls (W/A/S/D) with 180°‑reversal lock
-- PAL timing (50 Hz) via a simple frame timer
-- Modular code layout with clear, function‑level comments
+- Text-mode rendering (40×25) with fast address computation  
+- SID-based RNG for fragment-safe food placement  
+- Smooth keyboard input (W/A/S/D) with 180°-reversal protection  
+- Hunger mechanic with flashing border warning and starvation state  
+- Pause/resume system (toggle `P` / `SPACE`) with pause-adjusted timer  
+- HUD displaying elapsed time and automatic speed-up curve  
+- PAL-synced frame pacing via raster polling  
+- Clean modular code layout (each system isolated in its own file)
 
 ---
 
@@ -21,33 +25,33 @@ This repository serves as a clean, well-commented example on how to structure a 
 
 ```
 src/
-  main.c
-  input.c
-  input.h
-  render.c
-  render.h
-  snake.c
-  snake.h
-  food.c
-  food.h
-  timer.c
-  timer.h
+  main.c          – main loop / integration
+  sys.c, sys.h    – frame sync + input/timer tick
+  input.c, input.h– directional + pause input
+  snake.c, snake.h– snake state & movement
+  food.c, food.h  – food spawn & eat logic
+  render.c, render.h– text-mode drawing
+  timer.c, timer.h– frame/second timer
+  hud.c, hud.h    – per-second HUD updates (time/speed/hunger)
+  hunger.c, hunger.h– hunger countdown + border flash
+  pause.c, pause.h– pause state & time bias tracking
 ```
 
-> All comments are placed on their own lines above the code they describe, making this a good reference for KickC-friendly C coding style.
+> Each module is self-contained and documented.  
+> All comments precede the code they describe — KickC-friendly style for clarity and ASM readability.
 
 ---
 
 ## 🛠 Requirements
 
-- **KickC 0.8.6** (tested with this version)
-- A C64 emulator such as **VICE** (e.g., `x64sc.exe`), or real C64 hardware
+- **KickC 0.8.6** compiler  
+- **VICE** (C64 emulator) or real C64 hardware
 
 ---
 
 ## ⚙️ Build & Run
 
-From the `src/` directory on Windows:
+From the `src/` directory:
 
 ```bat
 REM Build (KickC 0.8.6)
@@ -66,55 +70,62 @@ x64sc.exe -autostart .\snake.prg
 
 ## 🎮 Controls
 
-- **W / A / S / D** — Up / Left / Down / Right
-- **SPACE** or **R** — Restart after Game Over
+| Key | Action |
+|-----|---------|
+| **W / A / S / D** | Move Up / Left / Down / Right |
+| **P** | Pause game |
+| **SPACE** | Resume after pause |
+| **R** | Restart after Game Over |
 
-Reversal safety: Direct 180° turns are blocked (e.g., UP → DOWN on the next frame).
+🧠 Reversal safety: cannot instantly reverse direction (e.g. UP→DOWN).  
+⚠️ If you don’t eat within 12 seconds, you starve! The border flashes red/pink as a warning.
 
 ---
 
-## 📚 Educational Focus
+## 📚 Educational Highlights
 
-- Organizing a multi-file KickC project
-- Using VIC‑II and COLOR RAM from C
-- Fragment‑friendly arithmetic patterns (e.g., subtract loops instead of division/modulo)
-- Clean, readable code that still maps well to 6502
+- Modular multi-file KickC project structure  
+- Using **VIC-II raster sync** and **CIA timers** from C  
+- Implementing per-second game logic (`timer_second_edge()`)  
+- Handling **pause bias** to keep time accurate  
+- Safe 8-bit arithmetic (no `/` or `%`, only tables / loops)  
+- KickC 0.8.6 compliance (no `<`/`>` low/high operators, no `(void)` casts)  
+- Readable, efficient 6502 code
 
 ---
 
 ## 🧭 Roadmap / TODO
 
-Planned improvements (pull requests welcome):
-- **Start screen** — show title/instructions and require **SPACE** to start.
-- **Pre–Game Over freeze** — brief 0.5–1.0s pause on collision so the player sees what happened.
-- **Pause mechanic** — toggle pause/resume during play (e.g., **P**).
-- **Hunger mechanic** — the snake must eat every **12 seconds** or suffer a penalty (Game Over or length decay).
+Next improvements planned:
+- **Start screen** with title/instructions before first move  
+- **Game Over delay** before restart  
 - **Periodic growth** — the snake **grows automatically every 30 seconds**.
-- **No food-based growth** — eating does **not** increase length; it only resets hunger (and may affect score).
 - **Longer ramp to max speed** — increase the time before top speed (currently ~30s); make the curve more gradual.
 - **Prevent food over HUD timer** — exclude the timer’s `(x, y)` cells from spawn positions.
 - **Buffs and obstacles** — pickups that **slow** the snake or map tiles that add **extra collision**/hazards.
-- **NTSC compatibility** — optional timing adjustment for 60 Hz.
-- **Sound/FX** — basic SID beeps for eat / game over / speed-up.
-- **Scoring** — augment the survival timer with a score system.
+- **NTSC compatibility** (timing adjust for 60 Hz)  
+- **Basic SID FX** (eat / starve / speed-up tones)  
+- **High-score screen** with initials entry  
 
 ---
 
 ## 🧪 Development Tips
 
-- This project uses **KickC 0.8.6**; some comments mention fragment gaps and division/modulo avoidance that are relevant to this version.
-- PAL is assumed (`FPS=50`); adjust timers or use a raster IRQ for stable pacing if you later migrate to NTSC.
-- `render.h` defines the display constants (`MAP_W=40`, `MAP_H=25`), glyphs, and colors used across modules.
+- Keep per-frame order stable: **input → logic → render → HUD**.  
+- Use `wait_frame()` or `frame_sync_and_input()` for PAL 50 Hz pacing.  
+- For code clarity, each system exposes a minimal API (`*.h`) and hides state in `*.c`.  
+- Refer to **KickC 0.8.6 Playbook** in this repo for compiler-specific dos and don’ts.
 
 ---
 
 ## 🪪 License
 
-Released under the **MIT License** — free to use, modify, and redistribute.  
-See `LICENSE` for full text (recommended for your public repo).
+Released under the **MIT License** — free to use, modify, and distribute.  
+See `LICENSE` for full text.
 
 ---
 
 ## 👤 Author
 
-**@mihajlov39547** — If you find this repo helpful, please ⭐ it and consider contributing improvements!
+**@mihajlov39547**  
+If you enjoy this project, please ⭐ the repo and share improvements!
