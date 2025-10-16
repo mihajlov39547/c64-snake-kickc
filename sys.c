@@ -18,3 +18,11 @@ void frame_sync_and_input(Direction* pdir) {
     timer_tick();
     input_update(pdir);
 }
+
+// Blocking wait for a number of frames
+void wait_frames_blocking(unsigned int frames) {
+    while (frames != 0u) {
+        wait_frame();          // do NOT call timer_tick() here
+        frames = frames - 1u;  // (works reliably on word)
+    }
+}

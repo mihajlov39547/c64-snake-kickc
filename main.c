@@ -97,6 +97,12 @@ static void game_loop(void) {
 
                     // Collision check
                     if (snake_will_self_collide_next(&s, nx, ny)) {
+                        // Self-collision: immediate game over
+                        // Set border to red
+                        VICII->BORDER_COLOR = COL_RED;
+                        // wait for 1.5s on PAL (50 Hz) before showing game over
+                        wait_frames_blocking(75u);
+                        // Game over screen with final time
                         render_game_over(game_seconds());
                         return;
                     }
@@ -117,6 +123,9 @@ static void game_loop(void) {
             /* Tick HUD + hunger once per second; end if starved.
                This is pause-aware inside hud_tick(): it drains the edge and returns 0 while paused. */
             if (hud_tick(&move_interval, &sec_since_speedup)) {
+                // wait for 1.5s on PAL (50 Hz) before showing game over
+                wait_frames_blocking(75u);
+                // Game over screen with final time
                 render_game_over(game_seconds());
                 return;
             }

@@ -8,6 +8,7 @@
 #include "food.h"
 #include "render.h"
 #include "hunger.h"
+#include "hud.h"
 
 // Tracks whether SID RNG has been initialized (0 = no, 1 = yes)
 static unsigned char g_rng_inited = 0;
@@ -31,26 +32,14 @@ static uint8_t wrap_under(uint8_t v, uint8_t limit) {
     return v;
 }
 
-// Return 1 if the snake currently occupies cell (x,y); otherwise return 0
-// Performs a simple linear scan over the snake coordinates
-static uint8_t snake_cell_occupied(const Snake* s, uint8_t x, uint8_t y) {
-    uint8_t i = 0;
-    uint8_t len = s->len;
-    for (i = 0; i < len; i++) {
-        if (s->x[i] == x && s->y[i] == y) return 1;
-    }
-    return 0;
-}
-
 // Pick a random free cell and store it into f->x/f->y
-// Re-rolls until a cell not occupied by the snake is found
+// Re-rolls until a cell not occupied by the snake or HUD is found
 static void spawn_once(Food* f, const Snake* s) {
-    uint8_t x;
-    uint8_t y;
+    uint8_t x, y;
     do {
         x = wrap_under(rng8(), MAP_W);
         y = wrap_under(rng8(), MAP_H);
-    } while (snake_cell_occupied(s, x, y));
+    } while (snake_cell_occupied(s, x, y) || hud_covers_cell(x, y));
     f->x = x;
     f->y = y;
 }

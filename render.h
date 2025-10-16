@@ -29,6 +29,9 @@
 // Clear entire screen to background + white foreground text
 void render_clear(void);
 
+// Clear battlefield only
+void clear_battlefield();
+
 // Draw the entire snake from its ring buffer (full redraw)
 void render_draw_snake_full(const Snake* s);
 

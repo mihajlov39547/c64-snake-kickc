@@ -51,14 +51,21 @@ void render_clear() {
     VICII->BORDER_COLOR = 14;
 
     // Set classic blue background color
-    VICII->BG_COLOR     = 6;
+    clear_battlefield();
+}
+
+void clear_battlefield()
+{
+    VICII->BG_COLOR = 6;
 
     // Clear 40x25: character = space, color = white
     // (two tight loops avoid 16-bit multiply in the body)
     unsigned int off = 0;
-    for (unsigned char y = 0; y < MAP_H; ++y) {
-        for (unsigned char x = 0; x < MAP_W; ++x, ++off) {
-            SCREEN[off]    = CH_EMPTY;
+    for (unsigned char y = 0; y < MAP_H; ++y)
+    {
+        for (unsigned char x = 0; x < MAP_W; ++x, ++off)
+        {
+            SCREEN[off] = CH_EMPTY;
             COLOR_RAM[off] = COL_FG_WHITE;
         }
     }
@@ -148,10 +155,10 @@ static void print_text(unsigned char x, unsigned char y, const char* s) {
 -------------------------------------------------------------------- */
 void render_game_over(unsigned int total_seconds) {
     // Clear the screen before drawing the Game Over UI
-    render_clear();
+    clear_battlefield();
 
     // Use a red border for a dramatic effect
-    VICII->BORDER_COLOR = 2;
+    VICII->BORDER_COLOR = 2u;
 
     // Draw the “GAME OVER” title
     print_text(15, 11, "game over");

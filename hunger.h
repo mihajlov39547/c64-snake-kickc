@@ -24,6 +24,6 @@ void hunger_reset_on_feed(void);
 unsigned char hunger_tick_and_flash(void);
 
 // immediately set the border to the correct color for the current hunger state
-void hunger_apply_border_now(void);   // set border to correct color immediately
+void hunger_apply_border_now(void);
 
 #endif

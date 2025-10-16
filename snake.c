@@ -227,3 +227,14 @@ unsigned char snake_will_self_collide_next(const Snake* s,
     }
     return 0u;
 }
+
+// Return 1 if the snake currently occupies cell (x,y); otherwise return 0
+// Performs a simple linear scan over the snake coordinates
+static uint8_t snake_cell_occupied(const Snake* s, uint8_t x, uint8_t y) {
+    uint8_t i = 0;
+    uint8_t len = s->len;
+    for (i = 0; i < len; i++) {
+        if (s->x[i] == x && s->y[i] == y) return 1;
+    }
+    return 0;
+}
