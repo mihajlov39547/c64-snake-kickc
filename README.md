@@ -97,11 +97,6 @@ x64sc.exe -autostart .\snake.prg
 ## 🧭 Roadmap / TODO
 
 Next improvements planned:
-- **Start screen** with title/instructions before first move  
-- **Game Over delay** before restart  
-- **Periodic growth** — the snake **grows automatically every 30 seconds**.
-- **Longer ramp to max speed** — increase the time before top speed (currently ~30s); make the curve more gradual.
-- **Prevent food over HUD timer** — exclude the timer’s `(x, y)` cells from spawn positions.
 - **Buffs and obstacles** — pickups that **slow** the snake or map tiles that add **extra collision**/hazards.
 - **NTSC compatibility** (timing adjust for 60 Hz)  
 - **Basic SID FX** (eat / starve / speed-up tones)  
