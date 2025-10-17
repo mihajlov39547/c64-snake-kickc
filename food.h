@@ -21,11 +21,11 @@ void food_init(Food* f, const Snake* s);
 // Note: does not draw; caller may draw after moving/animating
 void food_spawn(Food* f, const Snake* s);
 
-// Handle eating food without growth:
-// - Normal snake step (no growth)
+// Handle eating food WITH growth:
+// - Grow step (tail not removed)
 // - Hunger reset and calm border
 // - Respawn and draw new food
-void food_handle_eat_no_growth(Snake* s, Direction dir, Food* food);
+void food_handle_eat_grow(Snake* s, Direction dir, Food* food);
 
 // Return a random 8-bit value using SID voice 3
 // Initializes the SID RNG on first call

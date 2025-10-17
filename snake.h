@@ -7,7 +7,7 @@
 // Length of the snake’s ring buffer (compile-time fixed).
 // If your project already defines SNAKE_LEN elsewhere, that wins.
 #ifndef SNAKE_LEN
-#define SNAKE_LEN 16
+#define SNAKE_LEN 255u
 #endif
 
 // Movement directions

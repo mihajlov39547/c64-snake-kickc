@@ -70,5 +70,6 @@ void render_erase_cell(unsigned char x, unsigned char y);
 void render_show_pause(void);
 void render_hide_pause(void);
 
+void render_show_start_screen(void);
 
 #endif

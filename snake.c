@@ -71,29 +71,28 @@ void    snake_occ_clear(uint8_t x, uint8_t y) { occ_clr(occ_idx(x, y)); }
 
 // Initialize snake as a centered horizontal line pointing right; seed occupancy grid
 void snake_init(Snake* s) {
-    /* Center row */
-    uint8_t cy = MAP_H / 2;
+    // Initial length and centered position
+    const uint8_t start_len = 16;
+    const uint8_t cy = (uint8_t)(MAP_H / 2);
+    const uint8_t cx = (uint8_t)(MAP_W / 2 - (start_len / 2));
 
-    /* Centered start X so the full initial length fits */
-    uint8_t cx = (uint8_t)(MAP_W / 2 - (SNAKE_LEN / 2));
+    // Set length and head index
+    s->len  = start_len;
+    s->head = (uint8_t)(start_len - 1);
 
-    s->len  = SNAKE_LEN;
-    s->head = (uint8_t)(SNAKE_LEN - 1);
-
-    /* A horizontal snake pointing right: [tail ... head] */
-    for (uint8_t i = 0; i < SNAKE_LEN; ++i) {
-        /* Increasing X across the row */
+    // Fill contiguous body: indices 0..len-1 == tail..head
+    for (uint8_t i = 0; i < start_len; ++i) {
         s->x[i] = (uint8_t)(cx + i);
         s->y[i] = cy;
     }
 
-    /* (Optional) initialize occupancy grid to match body */
+    // seed occupancy from the active body
     snake_occ_reset_from_body(s);
 }
 
 // Write head (x,y) into out parameters without modifying the snake
 void snake_head_xy(const Snake* s, uint8_t* out_x, uint8_t* out_y) {
-    uint8_t h = s->head;
+    uint8_t h = (s->len > 0) ? (uint8_t)(s->len - 1) : 0;
     *out_x = s->x[h];
     *out_y = s->y[h];
 }
@@ -103,12 +102,14 @@ void snake_next_xy(const Snake* s, Direction dir, uint8_t* out_x, uint8_t* out_y
     uint8_t hx, hy;
     snake_head_xy(s, &hx, &hy);
 
+    // Direction delta
     int8_t dx = 0, dy = 0;
     if (dir == DIR_UP)        dy = -1;
     else if (dir == DIR_DOWN) dy = +1;
     else if (dir == DIR_LEFT) dx = -1;
-    else                      dx = +1;  /* DIR_RIGHT */
+    else                      dx = +1;
 
+    // Next head with wrapping
     *out_x = wrap_add(hx, dx, MAP_W);
     *out_y = wrap_add(hy, dy, MAP_H);
 }
@@ -117,79 +118,54 @@ void snake_next_xy(const Snake* s, Direction dir, uint8_t* out_x, uint8_t* out_y
 void snake_step(Snake* s, Direction dir,
                 uint8_t* out_tail_x, uint8_t* out_tail_y) {
 
-    uint8_t head = s->head;
+    uint8_t nx, ny;
+    snake_next_xy(s, dir, &nx, &ny);
 
-    /* Find the true tail index from head & len: tail = head - (len-1) wrapped on SNAKE_LEN */
-    uint8_t tail = head;
-    uint8_t k = (s->len > 0) ? (uint8_t)(s->len - 1) : 0;
-    while (k--) {
-        if (tail == 0) tail = (uint8_t)(SNAKE_LEN - 1);
-        else           tail = (uint8_t)(tail - 1);
+    *out_tail_x = s->x[0];
+    *out_tail_y = s->y[0];
+
+    // shift body: [1]->[0], ..., [len-1]->[len-2]
+    uint8_t len = s->len;
+    for (uint8_t i = 0; i + 1 < len; ++i) {
+        s->x[i] = s->x[i+1];
+        s->y[i] = s->y[i+1];
     }
 
-    /* Current head position */
-    uint8_t hx = s->x[head];
-    uint8_t hy = s->y[head];
+    // write new head
+    s->x[len-1] = nx;
+    s->y[len-1] = ny;
+    s->head = (uint8_t)(len - 1);
 
-    /* Direction delta */
-    int8_t dx = 0, dy = 0;
-    if (dir == DIR_UP)        dy = -1;
-    else if (dir == DIR_DOWN) dy = +1;
-    else if (dir == DIR_LEFT) dx = -1;
-    else                      dx = +1;      /* DIR_RIGHT */
-
-    /* Next head with wrapping */
-    uint8_t nx = wrap_add(hx, dx, MAP_W);
-    uint8_t ny = wrap_add(hy, dy, MAP_H);
-
-    /* Report the cell leaving the body (for renderer erase) */
-    *out_tail_x = s->x[tail];
-    *out_tail_y = s->y[tail];
-
-    /* Advance ring: overwrite tail with new head and make it the new head */
-    s->head    = tail;
-    s->x[tail] = nx;
-    s->y[tail] = ny;
-
-    /* Keep occupancy grid consistent */
     snake_occ_clear(*out_tail_x, *out_tail_y);
     snake_occ_set(nx, ny);
 }
 
 // Advance one step in 'dir' and grow by one segment (tail is not removed)
+// Grow by one segment (no tail removal). If already at SNAKE_LEN, behave like a normal step.
 void snake_step_grow(Snake* s, Direction dir) {
-    /* Compute the next cell using the existing helper */
     uint8_t nx, ny;
     snake_next_xy(s, dir, &nx, &ny);
 
-    /* Advance ring head */
-    {
-        uint8_t new_idx = s->head + 1;
-        if(new_idx >= SNAKE_LEN) new_idx = 0;
-        s->head = new_idx;
-        s->x[new_idx] = nx;
-        s->y[new_idx] = ny;
-    }
-
-    /* Mark new cell occupied; do not clear old tail */
-    snake_occ_set(nx, ny);
-
-    /* Grow length up to SNAKE_LEN */
-    if(s->len < SNAKE_LEN) {
-        s->len = (uint8_t)(s->len + 1);
+    // Still room? append at the first free slot (index == len)
+    if (s->len < (uint8_t)SNAKE_LEN) {
+        // Append new segment
+        uint8_t idx = s->len;
+        s->x[idx] = nx;
+        s->y[idx] = ny;
+        // Advance logical length and head
+        s->len = (uint8_t)(idx + 1);
+        s->head = (uint8_t)(s->len - 1);
+        // Mark new head as occupied
+        snake_occ_set(nx, ny);
+    } else {
+        // At capacity: just do a normal step so gameplay continues
+        uint8_t tx, ty;
+        snake_step(s, dir, &tx, &ty);
     }
 }
 
-// Compute the current tail index: head - (len-1) modulo SNAKE_LEN
 unsigned char snake_tail_index(const Snake* s) {
-    /* Tail is head - (len-1) modulo SNAKE_LEN */
-    unsigned char t = s->head;
-    unsigned char k = (s->len > 0) ? (unsigned char)(s->len - 1) : 0;
-    while (k--) {
-        if (t == 0) t = (unsigned char)(SNAKE_LEN - 1);
-        else        t = (unsigned char)(t - 1);
-    }
-    return t;
+    return 0u;
 }
 
 // Compute the next wrapped head cell if moving in 'dir' (no mutation)
@@ -218,15 +194,12 @@ void snake_compute_next_head_wrap(const Snake* s, Direction dir,
 // Test if moving to (nx,ny) would collide with the snake body (excluding moving tail)
 unsigned char snake_will_self_collide_next(const Snake* s,
                                            unsigned char nx, unsigned char ny) {
-    unsigned char tail_i = snake_tail_index(s);
-    unsigned char i;
-    for (i = 0; i < SNAKE_LEN; i++) {
-        // moving tail vacates its cell
-        if (i == tail_i) continue;
+    for (uint8_t i = 1; i < s->len; ++i) {
         if (s->x[i] == nx && s->y[i] == ny) return 1u;
     }
     return 0u;
 }
+
 
 // Return 1 if the snake currently occupies cell (x,y); otherwise return 0
 // Performs a simple linear scan over the snake coordinates

@@ -39,7 +39,7 @@ static void spawn_once(Food* f, const Snake* s) {
     do {
         x = wrap_under(rng8(), MAP_W);
         y = wrap_under(rng8(), MAP_H);
-    } while (snake_cell_occupied(s, x, y) || hud_covers_cell(x, y));
+    } while (snake_occ_test(x, y) || hud_covers_cell(x, y));
     f->x = x;
     f->y = y;
 }
@@ -64,23 +64,27 @@ void food_init(Food* f, const Snake* s) {
     render_draw_food(f->x, f->y);
 }
 
-
-// Handle eating food without growth:
-// - Normal snake step (no growth)
+// Handle eating food WITH growth:
+// - Grow step (tail not removed)
 // - Hunger reset and calm border
-// - Respawn and draw new foodyj
-void food_handle_eat_no_growth(Snake* s, Direction dir, Food* food) {
-    unsigned char old_tail_x, old_tail_y, nhx, nhy;
+// - Respawn and draw new food
+void food_handle_eat_grow(Snake* s, Direction dir, Food* food) {
+    unsigned char nx, ny;
 
-    // Normal step (no growth)
-    snake_step(s, dir, &old_tail_x, &old_tail_y);
-    snake_head_xy(s, &nhx, &nhy);
-    render_apply_step(old_tail_x, old_tail_y, nhx, nhy);
+    // Precompute next head cell
+    snake_next_xy(s, dir, &nx, &ny);
 
-    // Hunger reset and calm border
+    // Grow by one segment (updates occupancy, does NOT erase tail)
+    snake_step_grow(s, dir);
+
+    // Draw only the new head at nx,ny (no tail erase)
+    render_apply_grow(nx, ny);
+
+    // Reset hunger & border
     hunger_reset_on_feed();
 
-    // Respawn and draw food
+    // Respawn food on a free cell and draw it
     food_spawn(food, s);
     render_draw_food(food->x, food->y);
 }
+

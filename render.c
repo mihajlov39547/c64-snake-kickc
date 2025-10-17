@@ -75,18 +75,11 @@ void clear_battlefield()
    Snake rendering
 -------------------------------------------------------------------- */
 void render_draw_snake_full(const Snake* s) {
-    unsigned char i, cnt;
-
-    // Start from the oldest segment first
-    unsigned char idx = snake_tail_index(s);
-
-    for (cnt = 0; cnt < s->len; cnt++) {
-        unsigned int off = (unsigned int)s->y[idx] * MAP_W + s->x[idx];
+    unsigned char i;
+    for (i = 0; i < s->len; ++i) {
+        unsigned int off = (unsigned int)s->y[i] * MAP_W + s->x[i];
         SCREEN[off]    = CH_SNAKE;
         COLOR_RAM[off] = COL_SNAKE;
-
-        idx++;
-        if (idx >= SNAKE_LEN) idx = 0;
     }
 }
 
@@ -154,21 +147,48 @@ static void print_text(unsigned char x, unsigned char y, const char* s) {
    Game Over screen
 -------------------------------------------------------------------- */
 void render_game_over(unsigned int total_seconds) {
-    // Clear the screen before drawing the Game Over UI
+    // Clear the screen
     clear_battlefield();
 
-    // Use a red border for a dramatic effect
+    // Red border
     VICII->BORDER_COLOR = 2u;
 
-    // Draw the “GAME OVER” title
-    print_text(15, 11, "game over");
+    // Title & restart text (<=40 chars, uppercase)
+    static const char t_title[]   = "G A M E   O V E R";
+    static const char t_restart[] = "PRESS SPACE OR R TO RESTART";
 
-    // Draw the label "time " and the elapsed time in mm:ss
-    print_text(15, 13, "time ");
-    render_draw_mmss_at(20, 13, total_seconds);
+    // --- Build "TIME 00:00" as one centered string ---
+    // Convert total_seconds -> mm:ss with 8-bit compares only
+    unsigned int secs = total_seconds;
+    unsigned char mm  = 0;
 
-    // Draw the restart hint
-    print_text(9, 20, "press space or r to restart");
+    while (secs >= 60u) {
+        if (mm == (unsigned char)99) {          // cap at 99 using 8-bit literal
+            break;
+        }
+        secs -= 60u;
+        mm = (unsigned char)(mm + 1);           // keep it 8-bit
+    }
+    unsigned char ss = (unsigned char)secs;
+
+    // Buffer: "TIME 00:00\0" (length 10)
+    char t_time[11];
+    t_time[0]  = 'T';
+    t_time[1]  = 'I';
+    t_time[2]  = 'M';
+    t_time[3]  = 'E';
+    t_time[4]  = ' ';
+    t_time[5]  = (char)('0' + DIG_TENS[mm]);   // tens of minutes
+    t_time[6]  = (char)('0' + DIG_ONES[mm]);   // ones of minutes
+    t_time[7]  = ':';
+    t_time[8]  = (char)('0' + DIG_TENS[ss]);   // tens of seconds
+    t_time[9]  = (char)('0' + DIG_ONES[ss]);   // ones of seconds
+    t_time[10] = 0;
+
+    // Draw
+    print_centered(10, t_title,   1);  // white title
+    print_centered(13, t_time,    1);  // white time line (single centered string)
+    print_centered(18, t_restart, 7);  // yellow restart hint
 }
 
 // Compute linear screen offset y*MAP_W + x (fits in 16-bit; KickC optimizes well)
@@ -230,76 +250,97 @@ void render_erase_cell(unsigned char x, unsigned char y) {
     COLOR_RAM[off] = COL_BG;
 }
 
-// Draw the "PAUSED" message centered on the screen
-// (overwrites whatever was there; caller must redraw)
+// Clear a centered line by overwriting spaces (len = text length you drew)
+static void clear_centered_line(unsigned char row, unsigned char len) {
+    const unsigned char COLS = (unsigned char)40;
+    unsigned char col = (unsigned char)(((unsigned char)(COLS - len)) >> 1);
+    unsigned int off  = (unsigned int)row * 40u + (unsigned int)col;
+
+    while (len--) {
+        SCREEN[off]    = (unsigned char)32;  // space
+        COLOR_RAM[off] = (unsigned char)0;   // black (or keep prior if you prefer)
+        ++off;
+    }
+}
+
+// Show the pause overlay (does NOT clear the whole screen)
 void render_show_pause(void) {
-    // Line 1: "== PAUSED ==" (12 chars)
-    static const char msg1[12] = { '=', '=', ' ', 'p','a','u','s','e','d',' ', '=', '=' };
-    // Line 2: "(press SPACE to continue)" (25 chars)
-    static const char msg2[25] =
-        { '(', 'p','r','e','s','s',' ', 's','p','a','c','e',' ', 't','o',' ',
-          'c','o','n','t','i','n','u','e', ')' };
+    // Lines (<=40 chars, uppercase)
+    static const char L1[] = "== PAUSED ==";                 // length 12
+    static const char L2[] = "PRESS SPACE TO CONTINUE";      // length 24
 
-    const unsigned char len1 = (unsigned char)12;
-    const unsigned char len2 = (unsigned char)25;
+    // Light blue border while paused (optional)
+    VICII->BORDER_COLOR = 14u;
 
-    const unsigned char row1 = (unsigned char)12;
-    const unsigned char row2 = (unsigned char)13;
-
-    const unsigned char col1 = (unsigned char)((unsigned char)(40u - (unsigned int)len1) / 2u);
-    const unsigned char col2 = (unsigned char)((unsigned char)(40u - (unsigned int)len2) / 2u);
-
-    unsigned int off;
-    unsigned char i;
-
-    // Line 1
-    off = (unsigned int)row1 * 40u + (unsigned int)col1;
-    i = 0u;
-    while (i != len1) {
-        SCREEN[off + (unsigned int)i]    = (unsigned char)msg1[i];
-        COLOR_RAM[off + (unsigned int)i] = (unsigned char)1;
-        i++;
-    }
-
-    // Line 2
-    off = (unsigned int)row2 * 40u + (unsigned int)col2;
-    i = 0u;
-    while (i != len2) {
-        SCREEN[off + (unsigned int)i]    = (unsigned char)msg2[i];
-        COLOR_RAM[off + (unsigned int)i] = (unsigned char)1;
-        i++;
-    }
+    // Draw centered, white
+    print_centered((unsigned char)12, L1, (unsigned char)1);
+    print_centered((unsigned char)13, L2, (unsigned char)1);
 }
 
-// Erase the "PAUSED" message by overwriting with spaces
+// Erase the pause overlay (restores spaces over the same area)
 void render_hide_pause(void) {
-    const unsigned char len1 = (unsigned char)12;
-    const unsigned char len2 = (unsigned char)25;
+    // Must match the strings used in render_show_pause()
+    const unsigned char LEN1 = (unsigned char)12;  // "== PAUSED =="
+    const unsigned char LEN2 = (unsigned char)24;  // "PRESS SPACE TO CONTINUE"
 
-    const unsigned char row1 = (unsigned char)12;
-    const unsigned char row2 = (unsigned char)13;
+    clear_centered_line((unsigned char)12, LEN1);
+    clear_centered_line((unsigned char)13, LEN2);
+}
 
-    const unsigned char col1 = (unsigned char)((unsigned char)(40u - (unsigned int)len1) / 2u);
-    const unsigned char col2 = (unsigned char)((unsigned char)(40u - (unsigned int)len2) / 2u);
+// ---------------------------------------------
+// Title / Start screen
+// ---------------------------------------------
+// Show the start screen (safe for C64 UPPERCASE/GRAPHICS charset)
+void render_show_start_screen(void) {
+    VICII->BORDER_COLOR = 14u;
+    VICII->BG_COLOR     = 6u;
+    render_clear_playfield();
 
-    unsigned int off;
-    unsigned char i;
+    print_centered(6,  "S N A K E",                       1);
+    print_centered(9,  "EAT FOOD TO GROW",                1);
+    print_centered(10, "EAT EVERY 12 SECONDS TO SURVIVE", 1);
+    print_centered(12, "DO NOT RUN INTO YOURSELF",        1);
+    print_centered(14, "MOVE WITH WASD  P FOR PAUSE",     1);
+    print_centered(17, "PRESS SPACE TO START",            7);
+}
 
-    // Clear line 1
-    off = (unsigned int)row1 * 40u + (unsigned int)col1;
-    i = 0u;
-    while (i != len1) {
-        SCREEN[off + (unsigned int)i]    = (unsigned char)32; // space
-        COLOR_RAM[off + (unsigned int)i] = (unsigned char)0;  // black (or keep prior)
-        i++;
+// ASCII (uppercase) -> C64 screen code-
+static unsigned char ascii_to_screen(unsigned char ch) {
+    // Map 'A'..'Z' (65..90) -> 1..26 using 8-bit subtraction + range check
+    // Other chars are mostly left as-is (space, digits, punctuation)
+    unsigned char t = (unsigned char)(ch - (unsigned char)65);
+    if (t <= (unsigned char)25) {
+        return (unsigned char)(t + (unsigned char)1);
     }
+    // Space stays space
+    if (ch == (unsigned char)32) return (unsigned char)32;
 
-    // Clear line 2
-    off = (unsigned int)row2 * 40u + (unsigned int)col2;
-    i = 0u;
-    while (i != len2) {
-        SCREEN[off + (unsigned int)i]    = (unsigned char)32;
-        COLOR_RAM[off + (unsigned int)i] = (unsigned char)0;
-        i++;
+    // Digits and basic punctuation are fine as-is in screen codes
+    return ch;
+}
+
+// --- Centered print ---
+static void print_centered(unsigned char row, const char* s, unsigned char color) {
+    const unsigned char COLS = (unsigned char)40;
+    unsigned char len = 0;
+    const char* p = s;
+    unsigned char rem = COLS;
+
+    while ((*p != 0) && (rem != 0)) { ++len; ++p; --rem; }
+
+    // (40 - len) / 2  using 8-bit math
+    unsigned char col = (unsigned char)(((unsigned char)(COLS - len)) >> 1);
+
+    // write chars & color
+    {
+        unsigned int off = (unsigned int)row * 40u + (unsigned int)col;
+        unsigned char i = 0;
+        while (i != len) {
+            unsigned char sc = ascii_to_screen((unsigned char)s[i]);
+            SCREEN[off + i]    = sc;
+            COLOR_RAM[off + i] = color;
+            ++i;
+        }
     }
 }
+

@@ -107,15 +107,17 @@ static void game_loop(void) {
                         return;
                     }
 
-                     // Eat check
+                    // Eat check
                     if ((nx == food.x) && (ny == food.y)) {
-                        food_handle_eat_no_growth(&s, dir, &food);
+                        // GROW on eat
+                        food_handle_eat_grow(&s, dir, &food);
                     } else {
                         // Normal step (no growth)
-                        unsigned char old_tail_x, old_tail_y, nhx, nhy;
+                        unsigned char old_tail_x, old_tail_y;
                         snake_step(&s, dir, &old_tail_x, &old_tail_y);
-                        snake_head_xy(&s, &nhx, &nhy);
-                        render_apply_step(old_tail_x, old_tail_y, nhx, nhy);
+
+                        // We already computed nx,ny before the step; that's the new head cell
+                        render_apply_step(old_tail_x, old_tail_y, nx, ny);
                     }
                 }
             }
@@ -137,6 +139,10 @@ static void game_loop(void) {
    MAIN: restart loop
 -------------------------------------- */
 void main(void) {
+
+    // Show start screen and wait for SPACE
+    show_start_and_wait();
+
     while (1) {
         // Run a single game session
         game_loop();
@@ -149,4 +155,18 @@ void main(void) {
             wait_frame();
         }
     }
+}
+
+static void show_start_and_wait(void) {
+    render_show_start_screen();
+
+    // Wait for SPACE (frame-synced)
+    while (1) {
+        keyboard_event_scan();
+        if (keyboard_key_pressed(KEY_SPACE)) break;
+        wait_frame();
+    }
+
+    // Clean screen before starting
+    render_clear();
 }
